@@ -1,0 +1,37 @@
+CREATE DATABASE IF NOT EXISTS algotrade;
+CREATE DATABASE IF NOT EXISTS algotrade_replica;
+
+CREATE TABLE IF NOT EXISTS algotrade.algopack
+(
+    id                      UUID,
+    wagnum                  UInt64,
+    st_id_disl              UInt64,
+    st_id_dest              UInt64,
+    train_st_start          UInt64,
+    train_st_end            UInt64,
+    train_st_num            UInt64,
+    train_index             String,
+    operdate                DateTime,
+    datetime                DateTime,
+    created_at              DateTime  DEFAULT now()
+)
+Engine=ReplicatedMergeTree('{{ node.ALGOTRADE.REPLICA_PATH }}', '{{ node.ALGOTRADE.REPLICA_NAME }}')
+PARTITION BY toYYYYMMDD(created_at)
+ORDER BY (id);
+
+
+CREATE TABLE IF NOT EXISTS default.{{ node.ALGOTRADE.DISTRIBUTED_TABLE }}
+(
+    id                      UUID,
+    wagnum                  UInt64,
+    st_id_disl              UInt64,
+    st_id_dest              UInt64,
+    train_st_start          UInt64,
+    train_st_end            UInt64,
+    train_st_num            UInt64,
+    train_index             String,
+    operdate                DateTime,
+    datetime                DateTime,
+    created_at              DateTime  DEFAULT now()
+)
+ENGINE = Distributed({{ node.CLUSTER }}, '', {{ node.ALGOTRADE.DISTRIBUTED_TABLE }}, rand());
