@@ -3,8 +3,11 @@ from datetime import datetime
 from src.models.base import JSONModel, UUIDMixin, TimestampMixin
 
 
-class TickerModel(JSONModel, UUIDMixin, TimestampMixin):
+class TickerBriefModel(JSONModel, UUIDMixin, TimestampMixin):
     secid: str
+
+
+class TickerModel(TickerBriefModel):
     boardid: str
     shortname: str
     prevprice: float | None

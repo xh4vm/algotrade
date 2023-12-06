@@ -1,7 +1,17 @@
 from typing import Any, Iterator
 
 from src.transform.base import BaseTransformer
-from src.models.ticker import TickerModel
+from src.models.ticker import TickerModel, TickerBriefModel
+
+
+class TickerBriefTransformer(BaseTransformer):
+    def transform(self, data: Iterator[Any], to_dict: bool = False) -> Iterator[Any]:
+
+        for elem in data:
+            elem = TickerBriefModel(
+                secid=elem.get('SECID') or elem.get('secid')
+            )
+            yield elem.model_dump() if to_dict else elem
 
 
 class TickerTransformer(BaseTransformer):

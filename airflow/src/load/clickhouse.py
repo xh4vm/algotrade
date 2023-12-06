@@ -1,12 +1,13 @@
 from typing import Optional, Iterator, Any
 
 import backoff
-import pandas as pd
 from loguru import logger
 from clickhouse_driver import Client as Clickhouse
+from datetime import datetime, date
 
 from src.core.config import BACKOFF_CONFIG
 from src.load.base import BaseLoader
+from src.state.base import BaseState
 
 
 def ch_conn_is_alive(ch_conn: Clickhouse) -> bool:
@@ -20,21 +21,25 @@ def ch_conn_is_alive(ch_conn: Clickhouse) -> bool:
 class ClickhouseLoader(BaseLoader):
     def __init__(
         self,
+        state: BaseState,
         host: str,
         port: int,
         user: str = "default",
         password: str = "",
-        alt_hosts: Optional[list[str]] = None,
-        conn: Optional[Clickhouse] = None,
-        settings: Optional[dict[str, Any]] = None,
+        alt_hosts: list[str] | None = None,
+        conn: Clickhouse | None = None,
+        settings: dict[str, Any] | None = None,
+        batch_size: int = 100000,
     ) -> None:
         self._conn: Clickhouse = conn
         self._host: str = host
-        self._alt_hosts: Optional[list[str]] = alt_hosts
+        self._alt_hosts: list[str] | None = alt_hosts
         self._port: int = port
         self._user: str = user
         self._password: str = password
-        self._settings: Optional[dict[str, Any]] = settings
+        self._settings: dict[str, Any] | None = settings
+        self._state = state
+        self._batch_size = batch_size
 
     @property
     def conn(self) -> Clickhouse:
@@ -43,7 +48,7 @@ class ClickhouseLoader(BaseLoader):
 
         return self._conn
 
-    @backoff.on_exception(**BACKOFF_CONFIG, logger=logger)
+    # @backoff.on_exception(**BACKOFF_CONFIG, logger=logger)
     def _reconnection(self) -> Clickhouse:
         logger.info('Reconnection clickhouse node "%s:%d" ...', self._host, self._port)
 
@@ -59,10 +64,29 @@ class ClickhouseLoader(BaseLoader):
             password=self._password,
             settings=self._settings,
         )
+    
+    def _load(self, data: Iterator[tuple[type, str]], key: str) -> Iterator[type]:
+        i = 0
 
-    @backoff.on_exception(**BACKOFF_CONFIG, logger=logger)
-    def load(self, data: Iterator[type], table: str) -> int | None:
+        for elem in data:
+            i += 1
+   
+            down_limit = datetime.fromisoformat(
+                self._state.get(key, date(year=1970, month=1, day=1).isoformat())
+            )
+            down_limit = max(elem.get('end') or elem.get('ts'), down_limit)
 
-        return self.conn.execute(
-            f"INSERT INTO {table} VALUES ", (_.model_dump() for _ in data)
+            yield elem
+
+            self._state.set(key, down_limit.isoformat(), expire=None)
+
+    # @backoff.on_exception(**BACKOFF_CONFIG, logger=logger)
+    def load(self, data: Iterator[tuple[type, str]], table: str, key: str) -> int | None:
+
+        lines = self.conn.execute(
+            f"INSERT INTO {table} VALUES ", self._load(data=data, key=key)
         )
+
+        logger.info(f'Inserted "{lines}" lines into clickhouse')
+        
+        return lines

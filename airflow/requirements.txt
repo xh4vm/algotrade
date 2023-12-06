@@ -5,7 +5,7 @@ pydantic_settings==2.0.3
 orjson==3.9.10
 python-dotenv==1.0.0
 openpyxl==3.1.2
-redis==3.5.3
+redis==5.0.1
 psycopg2-binary==2.9.9
 celery==5.3.4
 apache-airflow-providers-celery==3.4.1

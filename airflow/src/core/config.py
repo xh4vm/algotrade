@@ -11,11 +11,12 @@ class PostgresSettings(BaseSettings):
     HOST: str
     PORT: int
     NAME: str
+    SCHEMA: str
 
     class Config:
         env_prefix = "DB_"
 
-    def dsl(self) -> dict[str, Any]:
+    def dsn(self) -> dict[str, Any]:
         return {
             "dbname": self.NAME,
             "user": self.USER,

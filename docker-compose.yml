@@ -93,6 +93,8 @@ services:
       - ./nginx/static/log/udp_error_log:/var/log/nginx/udp_error.log:rw
       - ./nginx/static/log/access_log:/var/log/nginx/access.log:rw
       - ./nginx/static/log/error_log:/var/log/nginx/error.log:rw
+      - ./notebooks/static:/var/www/jupyter/static/lab:ro
+      - ./notebooks/style:/var/www/jupyter/style:ro
     ports:
       - 80:80
 
@@ -409,6 +411,18 @@ services:
     user: "0:0"
     volumes:
       - ./airflow:/sources
+
+  jupyter-notebook:
+    <<: *base_service
+    build: ./notebooks
+    container_name: jupyter-notebook
+    volumes:
+      - ./notebooks/work:/home/jovyan/work/
+      - ./notebooks/config/jupyter_notebook_config.py:/home/jovyan/.jupyter/jupyter_notebook_config.py
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+    expose:
+      - 8888
 
 
 volumes:

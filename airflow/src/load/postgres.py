@@ -23,7 +23,7 @@ class PostgresLoader(BaseLoader):
         self._chunk_size = chunk_size
 
     def __enter__(self):
-        conn = pg_connect(**self._settings.dsl(), cursor_factory=DictCursor)
+        conn = pg_connect(**self._settings.dsn(), cursor_factory=DictCursor)
         self._cursor = conn.cursor()
         return self
 

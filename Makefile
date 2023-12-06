@@ -28,6 +28,9 @@ define log
 	@echo "${WHITE}----------------------------------------${RESET}"
 endef
 
+include .env
+db = db
+
 .PHONY: interactive build dev services
 run: poetry-install-build-dev build-dockers-dev
 
@@ -66,4 +69,4 @@ black:
 
 .PHONY: connect to postgres
 dbc:
-        docker exec -it ${db} psql --username=${DB_USER} --dbname=${DB_NAME}
+	docker exec -it ${db} psql --username=${DB_USER} --dbname=${DB_NAME}

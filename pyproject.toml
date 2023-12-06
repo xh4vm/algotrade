@@ -19,6 +19,8 @@ sh = "^2.0.6"
 clickhouse-driver = "^0.2.6"
 psycopg2-binary = "^2.9.9"
 orjson = "^3.9.10"
+redis = "^5.0.1"
+notebook = "^7.0.6"
 
 
 [build-system]
