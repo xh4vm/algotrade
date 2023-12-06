@@ -67,13 +67,14 @@ class ClickhouseLoader(BaseLoader):
     
     def _load(self, data: Iterator[tuple[type, str]], key: str) -> Iterator[type]:
         i = 0
-
+        
+        down_limit = datetime.fromisoformat(
+            self._state.get(key, date(year=1970, month=1, day=1).isoformat())
+        )
+        
         for elem in data:
             i += 1
-   
-            down_limit = datetime.fromisoformat(
-                self._state.get(key, date(year=1970, month=1, day=1).isoformat())
-            )
+            
             down_limit = max(elem.get('end') or elem.get('ts'), down_limit)
 
             yield elem
