@@ -15,7 +15,7 @@ dag_orderstat_grubber = DAG(
     description="orderstat grubber",
     # schedule=None,
     schedule="*/5 * * * *",
-    max_active_runs=5,
+    max_active_runs=3,
     start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
     tags=["algotrade"],
     catchup=False,
