@@ -48,7 +48,7 @@ class ClickhouseLoader(BaseLoader):
 
         return self._conn
 
-    # @backoff.on_exception(**BACKOFF_CONFIG, logger=logger)
+    @backoff.on_exception(**BACKOFF_CONFIG, logger=logger)
     def _reconnection(self) -> Clickhouse:
         logger.info('Reconnection clickhouse node "%s:%d" ...', self._host, self._port)
 
@@ -80,7 +80,7 @@ class ClickhouseLoader(BaseLoader):
 
             self._state.set(key, down_limit.isoformat(), expire=None)
 
-    # @backoff.on_exception(**BACKOFF_CONFIG, logger=logger)
+    @backoff.on_exception(**BACKOFF_CONFIG, logger=logger)
     def load(self, data: Iterator[tuple[type, str]], table: str, key: str) -> int | None:
 
         lines = self.conn.execute(
