@@ -1,0 +1,441 @@
+x-base-service: &base_service
+  env_file: .env
+  networks:
+    - algotrade
+
+x-base-clickhouse-node: &base-clickhouse-node
+  env_file: .env
+  mem_limit: 8g
+  expose:
+    - 9000
+    - 8123
+  ulimits:
+    memlock:
+      soft: -1
+      hard: -1
+  healthcheck:
+    test: curl http://x-base-clickhouse-node:8123 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+    interval: 30s
+    timeout: 10s
+    retries: 5
+
+x-redis: &base_redis
+  image: redis:7.2.2-alpine
+  container_name: redis
+  restart: unless-stopped
+  command: >
+    --requirepass ${REDIS_PASSWORD}
+  expose:
+    - ${REDIS_PORT}
+  healthcheck:
+    test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
+    interval: 30s
+    timeout: 10s
+    retries: 5
+
+x-base-kafka: &base_kafka
+  <<: *base_service
+  image: bitnami/kafka:3.6.0
+
+x-airflow-common: &airflow-common
+  build: ./airflow
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow-db/${AIRFLOW_DB_NAME}
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow-db/${AIRFLOW_DB_NAME}
+    AIRFLOW__CELERY__BROKER_URL: redis://:${REDIS_PASSWORD}@redis:${REDIS_PORT}/0
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/src:/opt/airflow/src
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/data:/opt/airflow/data
+  user: "${AIRFLOW_UID:-50000}:0"
+  env_file: .env
+  depends_on: &airflow-common-depends-on
+    redis:
+      condition: service_healthy
+    airflow-db:
+      condition: service_healthy
+
+x-airflow-worker: &airflow-worker
+  command: celery worker
+  healthcheck:
+    test:
+      - 'CMD-SHELL'
+      - 'celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+    interval: 10s
+    timeout: 10s
+    retries: 5
+  restart: always
+
+
+services:
+
+  nginx:
+    <<: *base_service
+    image: nginx:1.25.3-alpine
+    container_name: nginx
+    restart: unless-stopped
+    profiles:
+      - dev
+    depends_on:
+      - airflow-webserver
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/configs:/etc/nginx/conf.d:ro
+      - ./nginx/static/errors:/var/www/errors/:ro
+      - ./nginx/static/log/udp_error_log:/var/log/nginx/udp_error.log:rw
+      - ./nginx/static/log/access_log:/var/log/nginx/access.log:rw
+      - ./nginx/static/log/error_log:/var/log/nginx/error.log:rw
+      - ./notebooks/static:/var/www/jupyter/static/lab:ro
+      - ./notebooks/style:/var/www/jupyter/style:ro
+    ports:
+      - 80:80
+
+  db:
+    <<: *base_service
+    image: postgres:16.1-alpine3.18
+    hostname: db
+    container_name: db
+    env_file: .env
+    profiles:
+      - dev
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - ${DB_PORT}:5432
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U ${DB_USER} -D ${DB_NAME} > /dev/null; if [[ $$? == 0 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  pg-initer:
+    <<: *base_service
+    build: ./backend/pg_initer
+    container_name: pg-initer
+    restart: on-failure
+    profiles:
+      - dev
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ./backend/pg_initer/schema.sql:/opt/pg_initer/src/schema.sql:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  redis:
+    <<: *base_service
+    <<: *base_redis
+    container_name: redis
+    profiles:
+      - dev
+    volumes:
+      - redis-data:/data
+
+  clickhouse-initer:
+    <<: *base_service
+    build: ./backend/clickhouse_initer
+    container_name: clickhouse-initer
+    env_file: .env
+    environment:
+      - CH_CLUSTER_NAME={CH_CLUSTER_NAME}
+    profiles: 
+      - dev
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ./backend/clickhouse_initer/mapping:/opt/clickhouse_initer/mapping:ro
+    depends_on:
+      clickhouse-node01:
+        condition: service_healthy
+      clickhouse-node02:
+        condition: service_healthy
+      clickhouse-node03:
+        condition: service_healthy
+      clickhouse-node04:
+        condition: service_healthy
+      clickhouse-node05:
+        condition: service_healthy
+      clickhouse-node06:
+        condition: service_healthy
+ 
+  clickhouse-node01:
+    <<: *base_service
+    <<: *base-clickhouse-node
+    build: 
+      context: ./clickhouse/
+      dockerfile: keeper.Dockerfile
+    container_name: clickhouse-node01
+    profiles:
+      - dev
+    volumes:
+      - clickhouse-data01:/var/lib/clickhouse/
+    environment:
+      CH_NODE_HOST_NAME: clickhouse-node01
+      CH_NODE_SHARD_ID: 1
+      CH_NODE_REPLICA_NAME: clickhouse-node01
+      CH_KEEPER_SERVER_ID: 1
+      CH_USER: ${CLICKHOUSE_NODE01_USER}
+      CH_PASSWORD: ${CLICKHOUSE_NODE01_PASSWORD}
+
+  clickhouse-node02:
+    <<: *base_service
+    <<: *base-clickhouse-node
+    build:
+      context: ./clickhouse/
+      dockerfile: node.Dockerfile
+    container_name: clickhouse-node02
+    profiles:
+      - dev
+    volumes:
+      - clickhouse-data02:/var/lib/clickhouse/
+    environment:
+      CH_NODE_HOST_NAME: clickhouse-node02
+      CH_NODE_SHARD_ID: 1
+      CH_NODE_REPLICA_NAME: clickhouse-node02
+      CH_USER: ${CLICKHOUSE_NODE02_USER}
+      CH_PASSWORD: ${CLICKHOUSE_NODE02_PASSWORD}
+    depends_on:
+      clickhouse-keeper-quorum:
+        condition: service_healthy
+      clickhouse-node01:
+        condition: service_healthy
+
+  clickhouse-node03:
+    <<: *base_service
+    <<: *base-clickhouse-node
+    build: 
+      context: ./clickhouse/
+      dockerfile: keeper.Dockerfile
+    container_name: clickhouse-node03
+    volumes:
+      - clickhouse-data03:/var/lib/clickhouse/
+    environment:
+      CH_NODE_HOST_NAME: clickhouse-node03
+      CH_NODE_SHARD_ID: 2
+      CH_NODE_REPLICA_NAME: clickhouse-node03
+      CH_KEEPER_SERVER_ID: 2
+      CH_USER: ${CLICKHOUSE_NODE03_USER}
+      CH_PASSWORD: ${CLICKHOUSE_NODE03_PASSWORD}
+    profiles:
+      - dev
+
+  clickhouse-node04:
+    <<: *base_service
+    <<: *base-clickhouse-node
+    build: 
+      context: ./clickhouse/
+      dockerfile: node.Dockerfile
+    container_name: clickhouse-node04
+    profiles:
+      - dev
+    volumes:
+      - clickhouse-data04:/var/lib/clickhouse/
+    environment:
+      CH_NODE_HOST_NAME: clickhouse-node04
+      CH_NODE_SHARD_ID: 2
+      CH_NODE_REPLICA_NAME: clickhouse-node04
+      CH_USER: ${CLICKHOUSE_NODE04_USER}
+      CH_PASSWORD: ${CLICKHOUSE_NODE04_PASSWORD}
+    depends_on:
+      clickhouse-keeper-quorum:
+        condition: service_healthy
+      clickhouse-node03:
+        condition: service_healthy
+
+  clickhouse-node05:
+    <<: *base_service
+    <<: *base-clickhouse-node
+    build: 
+      context: ./clickhouse/
+      dockerfile: keeper.Dockerfile
+    container_name: clickhouse-node05
+    volumes:
+      - clickhouse-data05:/var/lib/clickhouse/
+    environment:
+      CH_NODE_HOST_NAME: clickhouse-node05
+      CH_NODE_SHARD_ID: 3
+      CH_NODE_REPLICA_NAME: clickhouse-node05
+      CH_KEEPER_SERVER_ID: 3
+      CH_USER: ${CLICKHOUSE_NODE05_USER}
+      CH_PASSWORD: ${CLICKHOUSE_NODE05_PASSWORD}
+    profiles:
+      - dev
+
+  clickhouse-node06:
+    <<: *base_service
+    <<: *base-clickhouse-node
+    build: 
+      context: ./clickhouse/
+      dockerfile: node.Dockerfile
+    container_name: clickhouse-node06
+    profiles:
+      - dev
+    volumes:
+      - clickhouse-data06:/var/lib/clickhouse/
+    environment:
+      CH_NODE_HOST_NAME: clickhouse-node06
+      CH_NODE_SHARD_ID: 3
+      CH_NODE_REPLICA_NAME: clickhouse-node06
+      CH_USER: ${CLICKHOUSE_NODE06_USER}
+      CH_PASSWORD: ${CLICKHOUSE_NODE06_PASSWORD}
+    depends_on:
+      clickhouse-keeper-quorum:
+        condition: service_healthy
+      clickhouse-node05:
+        condition: service_healthy
+
+  clickhouse-keeper-quorum:
+    <<: *base_service
+    <<: *base-clickhouse-node
+    build: 
+      context: ./clickhouse/
+      dockerfile: keeper.Dockerfile
+    container_name: clickhouse-keeper-quorum
+    environment:
+      CH_NODE_HOST_NAME: clickhouse-keeper-quorum
+      CH_NODE_SHARD_ID: 0
+      CH_NODE_REPLICA_NAME: clickhouse-keeper-quorum
+      CH_KEEPER_SERVER_ID: 4
+    depends_on:
+      - clickhouse-node01
+      - clickhouse-node03
+      - clickhouse-node05
+
+  airflow-db:
+    <<: *base_service
+    image: postgres:13-alpine
+    container_name: airflow-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${AIRFLOW_DB_USER}
+      - POSTGRES_PASSWORD=${AIRFLOW_DB_PASSWORD}
+      - POSTGRES_DB=${AIRFLOW_DB_NAME}
+    profiles: 
+      - dev
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - airflow-db:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U ${AIRFLOW_DB_USER} -D ${AIRFLOW_DB_NAME} > /dev/null; if [[ $$? == 0 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  airflow-webserver:
+    <<: *base_service
+    <<: *airflow-common
+    container_name: airflow-webserver
+    command: webserver
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://airflow-webserver:${AIRFLOW_PORT}/airflow/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ./airflow/config/airflow.cfg:/opt/airflow/airflow.cfg
+    profiles: 
+      - dev
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *base_service
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+    healthcheck:
+      test: ['CMD-SHELL', 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
+    profiles: 
+      - dev
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-worker01:
+    <<: *base_service
+    <<: *airflow-common
+    <<: *airflow-worker
+    container_name: airflow-worker01
+    profiles: 
+      - dev
+    env_file: .env
+    environment:
+      <<: *airflow-common-env
+      DUMB_INIT_SETSID: "0"
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-init:
+    <<: *base_service
+    <<: *airflow-common
+    container_name: airflow-init
+    entrypoint: /bin/bash
+    command: [ "-c", "chmod +x /opt/airflow/entrypoint_airflow.sh && /opt/airflow/entrypoint_airflow.sh" ]
+    profiles: 
+      - dev
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+    depends_on:
+      <<: *airflow-common-depends-on
+    user: "0:0"
+    volumes:
+      - ./airflow:/sources
+
+  jupyter-notebook:
+    <<: *base_service
+    build: ./notebooks
+    container_name: jupyter-notebook
+    volumes:
+      - ./notebooks/work:/home/jovyan/work/
+      - ./notebooks/config/jupyter_notebook_config.py:/home/jovyan/.jupyter/jupyter_notebook_config.py
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+    expose:
+      - 8888
+
+
+volumes:
+  clickhouse-data01:
+  clickhouse-data02:
+  clickhouse-data03:
+  clickhouse-data04:
+  clickhouse-data05:
+  clickhouse-data06:
+  postgres-data:
+  redis-data:
+  airflow-db:
+
+networks:
+  algotrade:
+    driver: bridge
