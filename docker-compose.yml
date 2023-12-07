@@ -72,6 +72,25 @@ x-airflow-worker: &airflow-worker
     retries: 5
   restart: always
 
+x-spark-worker: &base_spark_worker
+  build: ./spark
+  restart: on-failure
+  volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /etc/timezone:/etc/timezone:ro
+  depends_on:
+    spark-master:
+      condition: service_healthy
+  environment:
+    - SPARK_MODE=worker
+    - SPARK_MASTER_URL=${SPARK_MASTER_DRIVER}://${SPARK_MASTER_HOST}:${SPARK_MASTER_PORT}
+    - SPARK_WORKER_MEMORY=1G
+    - SPARK_WORKER_CORES=1
+    - SPARK_RPC_AUTHENTICATION_ENABLED=no
+    - SPARK_RPC_ENCRYPTION_ENABLED=no
+    - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+    - SPARK_SSL_ENABLED=no
+
 
 services:
 
@@ -423,6 +442,51 @@ services:
       JUPYTER_ENABLE_LAB: "yes"
     expose:
       - 8888
+
+  spark-master:
+    <<: *base_service
+    build: ./spark
+    container_name: spark-master
+    hostname: spark-master
+    restart: on-failure
+    env_file: .env
+    profiles: 
+      - dev
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    expose:
+      - ${SPARK_MASTER_WEB_PORT}
+      - ${SPARK_MASTER_PORT}
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    healthcheck:
+      test: curl http://${SPARK_MASTER_HOST}:${SPARK_MASTER_WEB_PORT} >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  spark-worker01:
+    <<: *base_service
+    <<: *base_spark_worker
+    container_name: spark-worker01
+    hostname: spark-worker01
+    env_file: .env
+    profiles: 
+      - dev
+
+  spark-worker02:
+    <<: *base_service
+    <<: *base_spark_worker
+    container_name: spark-worker02
+    hostname: spark-worker02
+    env_file: .env
+    profiles: 
+      - dev
 
 
 volumes:
