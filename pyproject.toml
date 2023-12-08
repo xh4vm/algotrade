@@ -21,6 +21,8 @@ psycopg2-binary = "^2.9.9"
 orjson = "^3.9.10"
 redis = "^5.0.1"
 notebook = "^7.0.6"
+apache-airflow-providers-apache-spark = "^4.4.0"
+pyspark = "^3.5.0"
 
 
 [build-system]
