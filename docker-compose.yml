@@ -84,8 +84,8 @@ x-spark-worker: &base_spark_worker
   environment:
     - SPARK_MODE=worker
     - SPARK_MASTER_URL=${SPARK_MASTER_DRIVER}://${SPARK_MASTER_HOST}:${SPARK_MASTER_PORT}
-    - SPARK_WORKER_MEMORY=1G
-    - SPARK_WORKER_CORES=1
+    - SPARK_WORKER_MEMORY=2G
+    - SPARK_WORKER_CORES=2
     - SPARK_RPC_AUTHENTICATION_ENABLED=no
     - SPARK_RPC_ENCRYPTION_ENABLED=no
     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
@@ -484,6 +484,24 @@ services:
     <<: *base_spark_worker
     container_name: spark-worker02
     hostname: spark-worker02
+    env_file: .env
+    profiles: 
+      - dev
+
+  spark-worker03:
+    <<: *base_service
+    <<: *base_spark_worker
+    container_name: spark-worker03
+    hostname: spark-worker03
+    env_file: .env
+    profiles: 
+      - dev
+
+  spark-worker04:
+    <<: *base_service
+    <<: *base_spark_worker
+    container_name: spark-worker04
+    hostname: spark-worker04
     env_file: .env
     profiles: 
       - dev
