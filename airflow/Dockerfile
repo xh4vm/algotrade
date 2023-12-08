@@ -11,6 +11,7 @@ FROM apache/airflow:slim-2.7.3-python3.11
 
 USER root
 COPY --from=airflow-builder /opt /opt
+RUN apt-get update && apt-get install -y --no-install-recommends openjdk-17-jdk-headless
 
 USER airflow
 ENV PYTHONPATH /opt/airflow/:/opt/airflow/src/
