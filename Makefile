@@ -34,6 +34,9 @@ db = db
 .PHONY: interactive build dev services
 run: poetry-install-build-dev build-dockers-dev
 
+.PHONY: interactive build api services
+api: poetry-install-build-dev build-dockers-api
+
 .PHONY: clean all docker images and pyc-files
 clean-all: clean-pyc clean-all-dockers
 
@@ -51,6 +54,11 @@ poetry-pre-commit-build:
 build-dockers-dev:
 	$(call log,Build dev containers)
 	docker-compose --profile dev up --build
+
+.PHONY: interactive build docker api services 
+build-dockers-api:
+	$(call log,Build dev containers)
+	docker-compose --profile api up --build
 
 .PHONY: clean-pyc
 clean-pyc:

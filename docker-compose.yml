@@ -150,6 +150,7 @@ services:
     restart: unless-stopped
     profiles:
       - dev
+      - api
     depends_on:
       - airflow-webserver
     volumes:
@@ -174,6 +175,7 @@ services:
     env_file: .env
     profiles:
       - dev
+      - api
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -196,6 +198,7 @@ services:
     restart: on-failure
     profiles:
       - dev
+      - api
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
@@ -210,6 +213,7 @@ services:
     container_name: redis
     profiles:
       - dev
+      - api
     volumes:
       - redis-data:/data
 
@@ -222,6 +226,7 @@ services:
       - CH_CLUSTER_NAME={CH_CLUSTER_NAME}
     profiles: 
       - dev
+      - api
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
@@ -249,6 +254,7 @@ services:
     container_name: clickhouse-node01
     profiles:
       - dev
+      - api
     volumes:
       - clickhouse-data01:/var/lib/clickhouse/
     environment:
@@ -268,6 +274,7 @@ services:
     container_name: clickhouse-node02
     profiles:
       - dev
+      - api
     volumes:
       - clickhouse-data02:/var/lib/clickhouse/
     environment:
@@ -300,6 +307,7 @@ services:
       CH_PASSWORD: ${CLICKHOUSE_NODE03_PASSWORD}
     profiles:
       - dev
+      - api
 
   clickhouse-node04:
     <<: *base_service
@@ -310,6 +318,7 @@ services:
     container_name: clickhouse-node04
     profiles:
       - dev
+      - api
     volumes:
       - clickhouse-data04:/var/lib/clickhouse/
     environment:
@@ -342,6 +351,7 @@ services:
       CH_PASSWORD: ${CLICKHOUSE_NODE05_PASSWORD}
     profiles:
       - dev
+      - api
 
   clickhouse-node06:
     <<: *base_service
@@ -352,6 +362,7 @@ services:
     container_name: clickhouse-node06
     profiles:
       - dev
+      - api
     volumes:
       - clickhouse-data06:/var/lib/clickhouse/
     environment:
@@ -394,6 +405,7 @@ services:
       - POSTGRES_DB=${AIRFLOW_DB_NAME}
     profiles: 
       - dev
+      - api
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
@@ -421,6 +433,7 @@ services:
       - ./airflow/config/airflow.cfg:/opt/airflow/airflow.cfg
     profiles: 
       - dev
+      - api
     depends_on:
       <<: *airflow-common-depends-on
       airflow-init:
@@ -439,6 +452,7 @@ services:
     restart: always
     profiles: 
       - dev
+      - api
     depends_on:
       <<: *airflow-common-depends-on
       airflow-init:
@@ -451,6 +465,7 @@ services:
     container_name: airflow-worker01
     profiles: 
       - dev
+      - api
     env_file: .env
     environment:
       <<: *airflow-common-env
@@ -468,6 +483,7 @@ services:
     command: [ "-c", "chmod +x /opt/airflow/entrypoint_airflow.sh && /opt/airflow/entrypoint_airflow.sh" ]
     profiles: 
       - dev
+      - api
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_UPGRADE: 'true'
@@ -566,6 +582,8 @@ services:
       - 9870:9870
     volumes:
       - hadoop_namenode:/hadoop/dfs/name
+    profiles:
+      - dev
     environment:
       - CLUSTER_NAME=test
       - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
@@ -581,6 +599,8 @@ services:
     <<: *base_service
     <<: *hadoop-datanode
     container_name: datanode01
+    profiles:
+      - dev
     volumes:
       - hadoop_datanode01:/hadoop/dfs/data
     env_file:
@@ -590,6 +610,8 @@ services:
     <<: *base_service
     <<: *hadoop-datanode
     container_name: datanode02
+    profiles:
+      - dev
     volumes:
       - hadoop_datanode02:/hadoop/dfs/data
     env_file:
@@ -599,6 +621,8 @@ services:
     <<: *base_service
     <<: *hadoop-datanode
     container_name: datanode03
+    profiles:
+      - dev
     volumes:
       - hadoop_datanode03:/hadoop/dfs/data
     env_file:
@@ -729,6 +753,24 @@ services:
       interval: 20s
       timeout: 120s
       retries: 10
+
+  invest_panel:
+    <<: *base_service
+    build: ./backend/invest_panel
+    container_name: invest_panel
+    env_file: .env
+    profiles:
+      - dev
+      - api
+    volumes:
+      - ./backend/invest_panel:/opt/invest_panel
+    expose:
+      - ${INVEST_PANEL_PORT}
+    healthcheck:
+      test: curl http://invest_panel:${INVEST_PANEL_PORT} >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 
 volumes:
