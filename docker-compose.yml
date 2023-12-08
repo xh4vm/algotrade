@@ -485,6 +485,8 @@ services:
     build: ./notebooks
     container_name: jupyter-notebook
     volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
       - ./notebooks/work:/home/jovyan/work/
       - ./notebooks/config/jupyter_notebook_config.py:/home/jovyan/.jupyter/jupyter_notebook_config.py
     environment:
