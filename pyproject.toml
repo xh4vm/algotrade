@@ -24,6 +24,9 @@ notebook = "^7.0.6"
 apache-airflow-providers-apache-spark = "^4.4.0"
 pyspark = "^3.5.0"
 motor = "^3.3.2"
+fastapi = "^0.104.1"
+starlette-context = "^0.3.6"
+dependency-injector = "^4.41.0"
 
 
 [build-system]
