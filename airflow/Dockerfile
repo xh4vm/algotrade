@@ -18,6 +18,7 @@ ENV PYTHONPATH /opt/airflow/:/opt/airflow/src/
 WORKDIR /opt/airflow
 
 COPY requirements.txt entrypoint_airflow.sh ./
+COPY clickhouse-native-jdbc-shaded-2.7.1.jar ./
 COPY --chown=airflow:root ./dags /opt/airflow/dags
 
 RUN pip install --no-index --find-links=/opt/wheels -r requirements.txt
