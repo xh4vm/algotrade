@@ -54,7 +54,7 @@ make run
 ## Ресурсы
 - [web](http://localhost/)
 - [airflow](http://localhost/airflow)
-- [notebook](http://localhost/notebook) - пароль `N0t3b00l`
+- [notebook](http://localhost/notebook) - пароль `N0t3b00k`
 
 > После запуска проекта для интеграции *spark* в *airflow* не обходимо добавить Connection типа spark с параметрами: 
 > - host: spark-master
