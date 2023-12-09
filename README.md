@@ -60,3 +60,9 @@ make run
 > - host: spark-master
 > - name: spark_default
 > - port: 7077
+
+## Полезные материалы
+[Видео](https://disk.yandex.ru/d/61PQuQaTu8_HRw)
+[Дизайн](https://www.figma.com/file/0CaXixqbdbUVleztf2rwKY/Go-Algo?type=design&node-id=0%3A1&mode=design&t=we1CqdAZFJWcIc1f-1)
+[Презентация](https://docs.google.com/presentation/d/1h0BXlX0i7KvrXWzesCA-I6dnY6NxrIft/edit?usp=sharing&ouid=107107611917625953262&rtpof=true&sd=true)
+[UserFlow](https://miro.com/app/board/uXjVNEmEy7c=/)
