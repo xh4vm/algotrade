@@ -61,10 +61,10 @@ make run
 > - name: spark_default
 > - port: 7077
 
-После первичного запуска существует возможность запуска следующих задач:
-- загрузка всех тикеров в систему (с использованием moexalgo SDK);
-- распределеная перекачка данных по акциям (с использованием moexalgo SDK) в систему (dab_candle_grubber, dag_tradestat_grubber, dag_orderstat_grubber, dag_obstat_grubber);
-- запуск торгового алгоритма (dag_analyze)
+После первичного запуска существует возможность выполнения следующих задач:
+- загрузка всех тикеров в систему (с использованием moexalgo SDK) (dag_tickers);
+- перекачка информации по акциям (с использованием moexalgo SDK) в систему (dab_candle_grubber, dag_tradestat_grubber, dag_orderstat_grubber, dag_obstat_grubber). При этом задачи стартуют по таймауту (по умолчанию каждые 5 минут) и выполняются распределенно (по умолчанию 3 воркера);
+- запуск торгового алгоритма (dag_analyze).
 
 ## Полезные материалы
 - [Видео](https://disk.yandex.ru/d/61PQuQaTu8_HRw)
