@@ -6,5 +6,5 @@ from src.models.base import JSONModel, UUIDMixin, CreatedModelMixin
 class PredictionModel(JSONModel, UUIDMixin, CreatedModelMixin):
     secid: str
     algorithm: str
-    prediction: float
+    value: float
     timestamp: datetime

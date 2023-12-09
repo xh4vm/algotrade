@@ -21,21 +21,28 @@ dag_analyze = DAG(
 )
 
 
-# clickhouse_to_parquet = SparkSubmitOperator(
-#     application='/opt/airflow/dags/algotrade/etl/clickhouse_to_parquet.py',
-#     conn_id='spark_default',
-#     verbose=1,
-#     task_id='clickhouse_to_parquet', 
-#     dag=dag_analyze
-# )
-
-parquet_to_mongo = SparkSubmitOperator(
-    application='/opt/airflow/dags/algotrade/etl/parquet_to_mongo.py',
+clickhouse_to_parquet = SparkSubmitOperator(
+    application='/opt/airflow/dags/algotrade/etl/clickhouse_to_parquet.py',
     conn_id='spark_default',
     verbose=1,
-    task_id='parquet_to_mongo', 
+    task_id='clickhouse_to_parquet', 
     dag=dag_analyze
 )
 
-parquet_to_mongo
-# clickhouse_to_parquet >> parquet_to_mongo
+parquet_to_clickhouse = SparkSubmitOperator(
+    application='/opt/airflow/dags/algotrade/etl/parquet_to_clickhouse.py',
+    conn_id='spark_default',
+    verbose=1,
+    task_id='parquet_to_clickhouse', 
+    dag=dag_analyze
+)
+
+analyze = SparkSubmitOperator(
+    application='/opt/airflow/dags/algotrade/etl/analyze.py',
+    conn_id='spark_default',
+    verbose=1,
+    task_id='analyze', 
+    dag=dag_analyze
+)
+
+clickhouse_to_parquet >> [analyze] >> parquet_to_clickhouse
