@@ -53,13 +53,18 @@ make run
 
 ## Ресурсы
 - [web](http://localhost/)
-- [airflow](http://localhost/airflow)
+- [airflow](http://localhost/airflow) - учетная запись `airflow`:`airflow`
 - [notebook](http://localhost/notebook) - пароль `N0t3b00k`
 
 > После запуска проекта для интеграции *spark* в *airflow* не обходимо добавить Connection типа spark с параметрами: 
 > - host: spark-master
 > - name: spark_default
 > - port: 7077
+
+После первичного запуска существует возможность запуска следующих задач:
+- загрузка всех тикеров в систему (с использованием moexalgo SDK);
+- распределеная перекачка данных по акциям (с использованием moexalgo SDK) в систему (dab_candle_grubber, dag_tradestat_grubber, dag_orderstat_grubber, dag_obstat_grubber);
+- запуск торгового алгоритма (dag_analyze)
 
 ## Полезные материалы
 - [Видео](https://disk.yandex.ru/d/61PQuQaTu8_HRw)
