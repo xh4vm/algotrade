@@ -11,7 +11,7 @@ class PredictionTransformer(BaseTransformer):
             elem = PredictionModel(
                 secid=elem.get('secid'),
                 algorithm=elem.get('algorithm'),
-                prediction=elem.get('prediction'),
+                value=elem.get('value'),
                 timestamp=elem.get('timestamp')
             )
             yield elem.model_dump() if to_dict else elem

@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .core.config import CONFIG, REDIS_CONFIG, POSTGRES
 from .containers.candle import ServiceContainer as CandleServiceContainer
+from .containers.prediction import ServiceContainer as PredictionServiceContainer
 from .containers.invest import ServiceContainer as InvestServiceContainer
 from .containers.cache import CacheResource, RedisCacheResource
 from .api.v1.ticker import router as ticker_router
@@ -24,6 +25,7 @@ def register_di_containers():
     })
 
     CandleServiceContainer(cache_svc=redis_resource)
+    PredictionServiceContainer(cache_svc=redis_resource)
 
 
 def register_routers(app: FastAPI):

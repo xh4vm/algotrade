@@ -65,7 +65,7 @@ class ClickhouseLoader(BaseLoader):
             settings=self._settings,
         )
     
-    def _load(self, data: Iterator[tuple[type, str]], key: str) -> Iterator[type]:
+    def _load(self, data: Iterator[dict[str, Any]], key: str) -> Iterator[type]:
         i = 0
         
         down_limit = datetime.fromisoformat(
@@ -82,10 +82,12 @@ class ClickhouseLoader(BaseLoader):
             self._state.set(key, down_limit.isoformat(), expire=None)
 
     @backoff.on_exception(**BACKOFF_CONFIG, logger=logger)
-    def load(self, data: Iterator[tuple[type, str]], table: str, key: str) -> int | None:
+    def load(self, data: Iterator[dict[str, Any]], table: str, key: str | None = None) -> int | None:
+
+        data_gen = data if key is None else self._load(data=data, key=key)
 
         lines = self.conn.execute(
-            f"INSERT INTO {table} VALUES ", self._load(data=data, key=key)
+            f"INSERT INTO {table} VALUES ", data_gen
         )
 
         logger.info(f'Inserted "{lines}" lines into clickhouse')

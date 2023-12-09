@@ -114,6 +114,20 @@ PARTITION BY toYYYYMMDD(created_at)
 ORDER BY (id);
 
 
+CREATE TABLE IF NOT EXISTS algotrade.predictions
+(
+    id                      UUID,
+    secid                   String,
+    algorithm               String,
+    value                   Float64,
+    timestamp               DateTime,
+    created_at              DateTime  DEFAULT now()
+)
+Engine=ReplicatedMergeTree('{{ node.ALGOTRADE.REPLICA_PATH }}/predictions', '{{ node.ALGOTRADE.REPLICA_NAME }}')
+PARTITION BY toYYYYMMDD(created_at)
+ORDER BY (id);
+
+
 CREATE TABLE IF NOT EXISTS default.candles
 (
     id                      UUID,
@@ -217,3 +231,15 @@ CREATE TABLE IF NOT EXISTS default.obstats
     created_at              DateTime  DEFAULT now()
 )
 ENGINE = Distributed({{ node.CLUSTER }}, '', obstats, rand());
+
+
+CREATE TABLE IF NOT EXISTS default.predictions
+(
+    id                      UUID,
+    secid                   String,
+    algorithm               String,
+    value                   Float64,
+    timestamp               DateTime,
+    created_at              DateTime  DEFAULT now()
+)
+ENGINE = Distributed({{ node.CLUSTER }}, '', predictions, rand());

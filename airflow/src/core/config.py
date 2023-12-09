@@ -197,20 +197,6 @@ class HDFSSettings(BaseSettings):
         env_prefix = 'HDFS_'
 
 
-class DBSettings(BaseSettings):
-    DRIVER: str
-    HOST: str
-    PORT: int
-
-    class Config:
-        env_prefix = 'PREDICT_DB_'
-
-
-class MongoDBSettings(DBSettings):
-    DB_NAME: str
-    COLLECTION_NAME: str
-
-
 NODES = [
     ClickhouseNode01(),
     ClickhouseNode02(),
@@ -226,7 +212,6 @@ REDIS_CONFIG = RedisSettings()
 POSTGRES_CONFIG = PostgresSettings()
 HDFS_CONFIG = HDFSSettings()
 SPARK_CONFIG = SparkSettings()
-MONGO_CONFIG: MongoDBSettings = MongoDBSettings()
 
 BACKOFF_CONFIG: dict[str, Any] = {
     "wait_gen": backoff.expo,

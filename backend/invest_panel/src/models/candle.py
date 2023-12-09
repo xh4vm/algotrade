@@ -22,5 +22,5 @@ class CandleTS(JSONModel):
     high: float
     low: float
     value: float
-    volume: int
+    volume: float
     ts: datetime

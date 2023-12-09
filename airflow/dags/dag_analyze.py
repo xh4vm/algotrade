@@ -21,21 +21,13 @@ dag_analyze = DAG(
 )
 
 
-# clickhouse_to_parquet = SparkSubmitOperator(
-#     application='/opt/airflow/dags/algotrade/etl/clickhouse_to_parquet.py',
-#     conn_id='spark_default',
-#     verbose=1,
-#     task_id='clickhouse_to_parquet', 
-#     dag=dag_analyze
-# )
-
-parquet_to_mongo = SparkSubmitOperator(
-    application='/opt/airflow/dags/algotrade/etl/parquet_to_mongo.py',
+analyze = SparkSubmitOperator(
+    application='/opt/airflow/dags/algotrade/etl/analyze.py',
     conn_id='spark_default',
     verbose=1,
-    task_id='parquet_to_mongo', 
-    dag=dag_analyze
+    task_id='analyze', 
+    dag=dag_analyze,
+    jars='/opt/clickhouse-native-jdbc-shaded-2.7.1.jar'
 )
 
-parquet_to_mongo
-# clickhouse_to_parquet >> parquet_to_mongo
+analyze
