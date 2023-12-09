@@ -15,7 +15,7 @@ dag_ticker_grubber = DAG(
     description="Ticker grubber",
     schedule=None,
     # schedule="0 0 * * 3",
-    max_active_runs=1,
+    max_active_runs=3,
     start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
     tags=["algotrade"],
     catchup=False,

@@ -13,7 +13,7 @@ dag_analyze = DAG(
     default_args=default_args,
     description="Analyze",
     schedule=None,
-    # schedule="0 0 * * 3",
+    schedule="*/30 * * * *",
     max_active_runs=1,
     start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
     tags=["algotrade"],
