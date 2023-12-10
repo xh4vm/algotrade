@@ -53,6 +53,7 @@ make run
 
 ## Ресурсы
 - [web](http://localhost/)
+- [Invest API REDOC](http://localhost/invest/api/redoc)
 - [airflow](http://localhost/airflow) - учетная запись `airflow`:`airflow`
 - [notebook](http://localhost/notebook) - пароль `N0t3b00k`
 
